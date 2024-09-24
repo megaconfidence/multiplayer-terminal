@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Interactive Shared WebSocket Terminal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/addons/fit/fit.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.css"
+    />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      #terminal {
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="terminal"></div>
+    <script>
+      const term = new Terminal({
+        cursorBlink: true,
+        macOptionIsMeta: true,
+        scrollback: 1000,
+      });
+
+      Terminal.applyAddon(fit);
+      term.open(document.getElementById("terminal"));
+      term.fit();
+
+      const socket = new WebSocket("ws://localhost:8787");
+
+      socket.onopen = () => {
+        term.write("Connecting to the shared terminal...\r\n");
+      };
+
+      socket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        switch (msg.type) {
+          case "output":
+            term.write(msg.data);
+            break;
+          case "resize":
+            term.resize(msg.cols, msg.rows);
+            break;
+        }
+      };
+
+      socket.onclose = () => {
+        term.write("\r\nDisconnected from the shared terminal.\r\n");
+      };
+
+      term.onData((data) => {
+        socket.send(JSON.stringify({ type: "input", data }));
+      });
+
+      term.onResize((size) => {
+        socket.send(
+          JSON.stringify({ type: "resize", cols: size.cols, rows: size.rows }),
+        );
+      });
+
+      window.addEventListener("resize", () => {
+        term.fit();
+      });
+    </script>
+  </body>
+</html>

@@ -33,6 +33,7 @@ export class MyDurableObject extends DurableObject {
 		this.broadcast(ws, msg);
 	}
 	broadcast(sender: WebSocket, msg: string | object) {
+		console.log(msg);
 		const id = this.sessions.get(sender).id;
 		for (let [ws] of this.sessions) {
 			if (sender == ws) continue;
